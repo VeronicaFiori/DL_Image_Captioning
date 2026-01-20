@@ -1,0 +1,12 @@
+# dataset
+/data/
+
+data.zip
+
+# checkpoints
+runs/
+
+# cache
+__pycache__/
+*.pt
+*.pth

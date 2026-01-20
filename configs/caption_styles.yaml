@@ -1,0 +1,7 @@
+styles:
+  factual: "Describe the image factually and concisely. Avoid speculation."
+  technical: "Describe the image with technical, precise language. Mention objects, attributes, and spatial relations."
+  poetic: "Write a poetic caption inspired by the image, but do not invent objects not visible."
+  funny: "Write a funny caption based on what is visible in the image, without inventing new objects."
+  journalism: "Write a short journalistic caption describing the scene objectively."
+  instagram: "Write an Instagram-style caption with a friendly tone and up to 3 hashtags, without inventing objects."
