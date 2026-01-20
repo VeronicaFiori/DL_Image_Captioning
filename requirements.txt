@@ -1,3 +1,4 @@
+"""
 torch
 torchvision
 transformers
@@ -14,3 +15,41 @@ qwen-vl-utils
 # Per metriche COCO-style (BLEU/METEOR/ROUGE/CIDEr/SPICE)
 pycocotools
 git+https://github.com/salaniz/pycocoevalcap
+"""
+
+# ---- Core runtime ----
+numpy
+pillow
+pyyaml
+tqdm
+
+# ---- UI ----
+streamlit
+
+# ---- Torch (su Colab di solito è già ok; NON pinniamo qui) ----
+torch
+torchvision
+
+# ---- LAVIS compat ----
+transformers==4.33.2
+timm==0.4.12
+diffusers==0.16.0
+easydict==1.9
+fairscale==0.4.4
+opencv-python-headless==4.5.5.64
+
+# ---- LAVIS extras (import safe) ----
+decord
+webdataset
+contexttimer
+opendatasets
+python-magic
+pyyaml_env_tag==0.1
+
+# ---- common deps ----
+sentencepiece
+ftfy
+regex
+einops
+iopath
+h5py
