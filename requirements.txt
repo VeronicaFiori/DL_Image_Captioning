@@ -1,21 +1,4 @@
-"""
-torch
-torchvision
-transformers
-accelerate
-streamlit
-pillow
-pyyaml
-tqdm
-numpy
 
-# Per Qwen2-VL (servono anche i tool utils del loro esempio)
-qwen-vl-utils
-
-# Per metriche COCO-style (BLEU/METEOR/ROUGE/CIDEr/SPICE)
-pycocotools
-git+https://github.com/salaniz/pycocoevalcap
-"""
 
 # ---- Core runtime ----
 numpy
