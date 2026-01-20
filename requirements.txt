@@ -1,27 +1,40 @@
-
-
-# ---- Core runtime ----
+# -------------------------
+# Core
+# -------------------------
 numpy
 pillow
 pyyaml
 tqdm
+einops
+iopath
+h5py
+regex
+ftfy
+sentencepiece
+opencv-python-headless
 
-# ---- UI ----
+# -------------------------
+# UI
+# -------------------------
 streamlit
 
-# ---- Torch (su Colab di solito è già ok; NON pinniamo qui) ----
-torch
-torchvision
+# -------------------------
+# HF stack (Py3.12-friendly)
+# NON pinniamo tokenizers vecchio: su Py3.12 non funziona.
+# -------------------------
+transformers>=4.40,<5.0
+accelerate>=0.26
+safetensors
+huggingface-hub
 
-# ---- LAVIS compat ----
-transformers==4.33.2
-timm==0.4.12
-diffusers==0.16.0
-easydict==1.9
-fairscale==0.4.4
-opencv-python-headless==4.5.5.64
+# -------------------------
+# Vision backbone (LAVIS usa timm)
+# -------------------------
+timm>=0.9,<1.1
 
-# ---- LAVIS extras (import safe) ----
+# -------------------------
+# LAVIS "import-safe" deps
+# -------------------------
 decord
 webdataset
 contexttimer
@@ -29,10 +42,9 @@ opendatasets
 python-magic
 pyyaml_env_tag==0.1
 
-# ---- common deps ----
-sentencepiece
-ftfy
-regex
-einops
-iopath
-h5py
+# -------------------------
+# Metrics COCO-caption
+# (se vuoi, puoi anche installarle dopo separatamente)
+# -------------------------
+pycocotools
+git+https://github.com/salaniz/pycocoevalcap
