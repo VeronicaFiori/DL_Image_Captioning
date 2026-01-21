@@ -13,5 +13,9 @@ accelerate
 safetensors
 huggingface-hub
 
+streamlit
+qwen-vl-utils
+
+
 pycocotools
 git+https://github.com/salaniz/pycocoevalcap

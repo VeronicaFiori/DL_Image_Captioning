@@ -85,7 +85,7 @@ def main():
 
         cap = captioner.caption(image=image, user_prompt=base_prompt)
 
-        preds.append({"image_id": i, "caption": cap})
+        preds.append({"image_id": i, "file_name": sample["image_id"], "caption": cap})
 
     preds_path = os.path.join(args.out_dir, f"preds_{args.split}.json")
     with open(preds_path, "w", encoding="utf-8") as f:
