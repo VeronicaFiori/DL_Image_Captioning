@@ -22,13 +22,7 @@ def build_coco_refs(dataset: Flickr8kDataset):
         images.append({"id": i, "file_name": img_name})
 
         for cap in captions:
-            annotations.append(
-                {
-                    "id": ann_id,
-                    "image_id": i,
-                    "caption": cap,
-                }
-            )
+            annotations.append({"id": ann_id, "image_id": i, "caption": cap})
             ann_id += 1
 
     return {"images": images, "annotations": annotations}
@@ -40,35 +34,31 @@ def main():
     ap.add_argument("--split", default="test", choices=["train", "val", "test"])
     ap.add_argument("--out_dir", default="results")
 
-    # stile (usa src/prompts.py)
-    ap.add_argument("--style", default="factual", help="style name from styles json/yaml in src/prompts")
-
-    # generation params
-    ap.add_argument("--model_id", default="Salesforce/blip2-flan-t5-base")
+    ap.add_argument("--style", default="factual")
+    ap.add_argument("--model_id", default="Salesforce/blip2-flan-t5-xl")  # <-- ESISTE
     ap.add_argument("--max_new_tokens", type=int, default=40)
     ap.add_argument("--num_beams", type=int, default=3)
     ap.add_argument("--temperature", type=float, default=1.0)
 
-    # qualità vita
-    ap.add_argument("--limit", type=int, default=0, help="0=all, otherwise generate only N samples")
+    ap.add_argument("--limit", type=int, default=0, help="0=all, otherwise only N samples")
     args = ap.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
 
-    # stile -> istruzione testuale
+    # stile -> istruzione
     styles = load_styles()
     instruction = build_style_prompt(args.style, styles)
 
     # dataset
     dataset = Flickr8kDataset(root=args.root, split=args.split, transform=None)
 
-    # refs COCO-style
+    # refs COCO
     refs = build_coco_refs(dataset)
     refs_path = os.path.join(args.out_dir, f"refs_{args.split}.json")
     with open(refs_path, "w", encoding="utf-8") as f:
         json.dump(refs, f, ensure_ascii=False, indent=2)
 
-    # captioner BLIP2 (Transformers)
+    # captioner
     captioner = Blip2Captioner(
         CaptionConfig(
             model_id=args.model_id,
@@ -78,17 +68,22 @@ def main():
         )
     )
 
-    # preds
     preds = []
     n = len(dataset) if args.limit == 0 else min(args.limit, len(dataset))
+
+    # prompt “solido” per captioning (1 frase)
+    base_prompt = (
+        "Write ONE concise caption describing the image. "
+        "Do not invent objects not visible. "
+        f"{instruction}"
+    )
 
     for i in tqdm(range(n), desc=f"Generating preds ({args.split})"):
         sample = dataset[i]
         img_path = os.path.join(args.root, "images", sample["image_id"])
         image = Image.open(img_path).convert("RGB")
 
-        # qui passiamo l'istruzione di stile come user_prompt
-        cap = captioner.caption(image=image, style="factual", user_prompt=instruction)
+        cap = captioner.caption(image=image, user_prompt=base_prompt)
 
         preds.append({"image_id": i, "caption": cap})
 

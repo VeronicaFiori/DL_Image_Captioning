@@ -8,13 +8,10 @@ ftfy
 sentencepiece
 opencv-python-headless
 
-torch
-torchvision
-
 transformers>=4.50,<5.0
 accelerate
 safetensors
+huggingface-hub
 
-# metrics
 pycocotools
 git+https://github.com/salaniz/pycocoevalcap

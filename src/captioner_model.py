@@ -9,7 +9,7 @@ from transformers import Blip2Processor, Blip2ForConditionalGeneration
 
 @dataclass
 class CaptionConfig:
-    model_id: str = "Salesforce/blip2-flan-t5-base"
+    model_id: str = "Salesforce/blip2-flan-t5-xl"  # <-- ESISTE
     max_new_tokens: int = 40
     num_beams: int = 3
     temperature: float = 1.0
@@ -24,10 +24,13 @@ class Blip2Captioner:
         if cfg.device is None:
             cfg.device = "cuda" if torch.cuda.is_available() else "cpu"
 
+        # fp16 su GPU per velocità/memoria
         if cfg.dtype is None:
             cfg.dtype = torch.float16 if cfg.device == "cuda" else torch.float32
 
         self.processor = Blip2Processor.from_pretrained(cfg.model_id)
+
+        # su GPU usiamo device_map="auto"
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             cfg.model_id,
             torch_dtype=cfg.dtype,
@@ -40,9 +43,9 @@ class Blip2Captioner:
         self.model.eval()
 
     @torch.inference_mode()
-    def caption(self, image: Image.Image, style: str = "factual", user_prompt: Optional[str] = None) -> str:
-        # Qui "style" è tenuto per compatibilità, ma lo stile vero lo passi via user_prompt
-        prompt = (user_prompt or "Describe the image.").strip()
+    def caption(self, image: Image.Image, user_prompt: str) -> str:
+        """Generate a caption given an image + instruction prompt."""
+        prompt = user_prompt.strip()
 
         inputs = self.processor(images=image, text=prompt, return_tensors="pt")
         inputs = {k: v.to(self.cfg.device) for k, v in inputs.items()}
