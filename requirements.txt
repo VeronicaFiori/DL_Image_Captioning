@@ -1,50 +1,20 @@
-# -------------------------
-# Core
-# -------------------------
 numpy
 pillow
 pyyaml
 tqdm
 einops
-iopath
-h5py
 regex
 ftfy
 sentencepiece
 opencv-python-headless
 
-# -------------------------
-# UI
-# -------------------------
-streamlit
+torch
+torchvision
 
-# -------------------------
-# HF stack (Py3.12-friendly)
-# NON pinniamo tokenizers vecchio: su Py3.12 non funziona.
-# -------------------------
-transformers>=4.40,<5.0
-accelerate>=0.26
+transformers>=4.50,<5.0
+accelerate
 safetensors
-huggingface-hub
 
-# -------------------------
-# Vision backbone (LAVIS usa timm)
-# -------------------------
-timm>=0.9,<1.1
-
-# -------------------------
-# LAVIS "import-safe" deps
-# -------------------------
-decord
-webdataset
-contexttimer
-opendatasets
-python-magic
-pyyaml_env_tag==0.1
-
-# -------------------------
-# Metrics COCO-caption
-# (se vuoi, puoi anche installarle dopo separatamente)
-# -------------------------
+# metrics
 pycocotools
 git+https://github.com/salaniz/pycocoevalcap
