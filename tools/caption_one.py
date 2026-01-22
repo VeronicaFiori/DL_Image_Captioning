@@ -5,6 +5,8 @@ from PIL import Image
 
 import torch
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
+from src.prompts import load_styles, build_style_prompt
+
 
 
 def pick_device(device_arg: str | None) -> str:
@@ -105,13 +107,29 @@ def main():
     dtype = pick_dtype(args.dtype, device)
 
     # prompt “solido” anti-hallucination
-    user_prompt = (
-        "Write ONE concise caption describing the image. "
-        "Do not invent objects not visible. "
-        f"Style: {args.style}. "
-    )
-    if args.extra.strip():
-        user_prompt += args.extra.strip()
+   # user_prompt = (
+   #     "Write ONE concise caption describing the image. "
+   #     "Do not invent objects not visible. "
+   #     f"Style: {args.style}. "
+   # )
+    
+    styles = load_styles()
+    style_text = build_style_prompt(args.style, styles)
+
+    user_prompt = f"""
+    Write ONE caption describing the image.
+
+    Constraints:
+    - Use only information visible in the image.
+    - Do not invent objects, actions, text, logos, or counts.
+    - Use exactly ONE sentence (max 20 words).
+
+    Style requirement:
+    {style_text}
+    """.strip()
+
+   # if args.extra.strip():
+   #     user_prompt += args.extra.strip()
 
     print("\n========== PROMPT ==========")
     print(user_prompt)
