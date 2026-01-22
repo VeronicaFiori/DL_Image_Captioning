@@ -12,6 +12,13 @@ def main():
     cocoRes = coco.loadRes(args.preds)
 
     cocoEval = COCOEvalCap(coco, cocoRes)
+
+    cocoEval.scorers = [
+        (scorer, method)
+        for scorer, method in cocoEval.scorers
+        if "SPICE" not in method
+    ]
+
     cocoEval.params["image_id"] = coco.getImgIds()
     cocoEval.evaluate()
 
