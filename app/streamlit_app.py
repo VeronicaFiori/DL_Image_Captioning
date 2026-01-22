@@ -4,7 +4,8 @@ from PIL import Image
 
 from src.prompts import load_styles, build_style_prompt
 from src.captioner_model import Blip2Captioner, CaptionConfig
-
+import os
+print("HF_HOME =", os.environ.get("HF_HOME"))
 st.set_page_config(page_title="BLIP2 Style Captioning", layout="centered")
 
 st.title("BLIP-2 Image Captioning con Stile")
