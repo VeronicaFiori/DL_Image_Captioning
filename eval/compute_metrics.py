@@ -1,9 +1,61 @@
 import argparse
 from pycocotools.coco import COCO
 from pycocoevalcap.eval import COCOEvalCap
-from pycocoevalcap.bleu.bleu import Bleu
-from pycocoevalcap.rouge.rouge import Rouge
-from pycocoevalcap.cider.cider import Cider
+
+def _keep_method(method, banned):
+    # method può essere stringa ("CIDEr") o lista (["Bleu_1",...])
+    if isinstance(method, (list, tuple)):
+        return all(m not in banned for m in method)
+    return method not in banned
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--refs", required=True, help="refs json (coco format)")
+    ap.add_argument("--preds", required=True, help="preds json (list of {image_id, caption})")
+    ap.add_argument("--skip", default="SPICE,METEOR", help="comma-separated metrics to skip")
+    args = ap.parse_args()
+
+    skip_set = {m.strip() for m in args.skip.split(",") if m.strip()}
+
+    coco = COCO(args.refs)
+    cocoRes = coco.loadRes(args.preds)
+    cocoEval = COCOEvalCap(coco, cocoRes)
+
+    # 1) Filtra gli scorer prima di valutare
+    cocoEval.scorers = [
+        (scorer, method)
+        for (scorer, method) in cocoEval.scorers
+        if _keep_method(method, skip_set)
+    ]
+
+    cocoEval.params["image_id"] = coco.getImgIds()
+
+    # 2) Valuta (se qualcosa crasha comunque, non muore tutto)
+    try:
+        cocoEval.evaluate()
+    except Exception as e:
+        print("Evaluation error (some metric crashed):", e)
+        # prova a stampare quello che è riuscito a calcolare
+        if hasattr(cocoEval, "eval") and cocoEval.eval:
+            pass
+        else:
+            raise
+
+    print("\n=== METRICS ===")
+    for metric, score in cocoEval.eval.items():
+        try:
+            print(f"{metric}: {float(score):.4f}")
+        except Exception:
+            print(f"{metric}: {score}")
+
+if __name__ == "__main__":
+    main()
+
+
+"""
+import argparse
+from pycocotools.coco import COCO
+from pycocoevalcap.eval import COCOEvalCap
 
 def main():
     ap = argparse.ArgumentParser()
@@ -14,35 +66,7 @@ def main():
     coco = COCO(args.refs)
     cocoRes = coco.loadRes(args.preds)
 
-    img_ids = coco.getImgIds()
 
-    gts = {}
-    res = {}
-
-    for img_id in img_ids:
-        gts[img_id] = coco.imgToAnns[img_id]
-        res[img_id] = cocoRes.imgToAnns[img_id]
-
-    scorers = [
-        (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
-        (Rouge(), "ROUGE_L"),
-        (Cider(), "CIDEr"),
-    ]
-
-    print("\n=== METRICS ===")
-    for scorer, method in scorers:
-        score, _ = scorer.compute_score(gts, res)
-
-        if isinstance(method, list):
-            for m, s in zip(method, score):
-                print(f"{m}: {s:.4f}")
-        else:
-            print(f"{method}: {score:.4f}")
-
-if __name__ == "__main__":
-    main()
-
-"""
     cocoEval = COCOEvalCap(coco, cocoRes)
 
     #try:
