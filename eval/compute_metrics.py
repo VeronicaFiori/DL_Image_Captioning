@@ -17,11 +17,11 @@ def main():
     #    cocoEval.evaluate()
     #except Exception as e:
     #    print("SPICE skipped:", e)
-    bad_metrics = {"SPICE", "METEOR"}
-    if "metrics" in cocoEval.params:
-        cocoEval.params["metrics"] = [
-            m for m in cocoEval.params["metrics"] if m not in bad_metrics
-        ]
+    cocoEval.scorers = [
+        (scorer, method)
+        for (scorer, method) in cocoEval.scorers
+        if method not in ["SPICE", "METEOR"]
+    ]
 
     cocoEval.params["image_id"] = coco.getImgIds()
     cocoEval.evaluate()
