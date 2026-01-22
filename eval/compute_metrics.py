@@ -11,6 +11,35 @@ def main():
     coco = COCO(args.refs)
     cocoRes = coco.loadRes(args.preds)
 
+    img_ids = coco.getImgIds()
+
+    gts = {}
+    res = {}
+
+    for img_id in img_ids:
+        gts[img_id] = coco.imgToAnns[img_id]
+        res[img_id] = cocoRes.imgToAnns[img_id]
+
+    scorers = [
+        (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
+        (Rouge(), "ROUGE_L"),
+        (Cider(), "CIDEr"),
+    ]
+
+    print("\n=== METRICS ===")
+    for scorer, method in scorers:
+        score, _ = scorer.compute_score(gts, res)
+
+        if isinstance(method, list):
+            for m, s in zip(method, score):
+                print(f"{m}: {s:.4f}")
+        else:
+            print(f"{method}: {score:.4f}")
+
+if __name__ == "__main__":
+    main()
+
+"""
     cocoEval = COCOEvalCap(coco, cocoRes)
 
     #try:
@@ -32,3 +61,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+"""
