@@ -1,6 +1,9 @@
 import argparse
 from pycocotools.coco import COCO
 from pycocoevalcap.eval import COCOEvalCap
+from pycocoevalcap.bleu.bleu import Bleu
+from pycocoevalcap.rouge.rouge import Rouge
+from pycocoevalcap.cider.cider import Cider
 
 def main():
     ap = argparse.ArgumentParser()
