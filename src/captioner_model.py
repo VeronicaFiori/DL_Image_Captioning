@@ -57,3 +57,48 @@ class Blip2Captioner:
             temperature=self.cfg.temperature,
         )
         return self.processor.batch_decode(gen, skip_special_tokens=True)[0].strip()
+
+    @torch.inference_mode()
+    def caption_facts_first(
+        self,
+        image: Image.Image,
+        style_text: str,
+        max_new_tokens: int = 60,
+    ) -> str:
+        # 1) facts extraction (deterministica)
+        facts_prompt = (
+        "List only the visible objects and actions in the image.\n"
+        "Rules:\n"
+        "- No guessing.\n"
+        "- No extra objects.\n"
+        "- If unsure write 'unknown'.\n"
+        "Return 3-8 bullet points.\n"
+        "Answer:"
+        )
+        facts = self.caption(
+            image=image,
+            user_prompt=facts_prompt,
+            max_new_tokens=60,
+            num_beams=5,
+            temperature=0.0,
+            top_p=1.0,
+        )
+
+        # 2) style rewrite constrained by facts
+        rewrite_prompt = (
+            "Using ONLY the facts below, write ONE caption.\n"
+            "Do not add any object not in the facts.\n"
+            "One sentence, max 20 words.\n"
+            f"Style requirement: {style_text}\n\n"
+            f"FACTS:\n{facts}\n\n"
+            "Caption:"
+        )
+        cap = self.caption(
+            image=image,
+            user_prompt=rewrite_prompt,
+            max_new_tokens=max_new_tokens,
+            num_beams=5,
+            temperature=0.0,
+            top_p=1.0,
+        )
+        return cap

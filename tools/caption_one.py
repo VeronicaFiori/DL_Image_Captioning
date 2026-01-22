@@ -6,8 +6,7 @@ from PIL import Image
 import torch
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
 from src.prompts import load_styles, build_style_prompt
-
-
+from src.captioner_model import Blip2Captioner, CaptionConfig
 
 def pick_device(device_arg: str | None) -> str:
     if device_arg:
@@ -101,6 +100,8 @@ def main():
     ap.add_argument("--device", default=None, help="cuda or cpu")
     ap.add_argument("--dtype", default=None, help="float16 or float32 (torch dtype name)")
     ap.add_argument("--extra", default="", help="extra instructions")
+    ap.add_argument("--facts_first", action="store_true", help="use two-step safe captioning")
+
     args = ap.parse_args()
 
     device = pick_device(args.device)
@@ -116,10 +117,13 @@ def main():
     styles = load_styles()
     style_text = build_style_prompt(args.style, styles)
 
-    user_prompt = f"""
+    if args.facts_first:
+        cap = captioner.caption_facts_first(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
+    else:
+        user_prompt = f"""
     Write ONE caption describing the image.
 
-    Constraints:
+    Constraints:    
     - Use only information visible in the image.
     - Do not invent objects, actions, text, logos, or counts.
     - Use exactly ONE sentence (max 20 words).
@@ -127,6 +131,12 @@ def main():
     Style requirement:
     {style_text}
     """.strip()
+        cap = captioner.caption(image=image, user_prompt=user_prompt,
+                                max_new_tokens=args.max_new_tokens,
+                                num_beams=args.num_beams,
+                                temperature=args.temperature,
+                                top_p=args.top_p)
+
 
    # if args.extra.strip():
    #     user_prompt += args.extra.strip()
