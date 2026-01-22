@@ -13,11 +13,10 @@ def main():
 
     cocoEval = COCOEvalCap(coco, cocoRes)
 
-    cocoEval.scorers = [
-        (scorer, method)
-        for scorer, method in cocoEval.scorers
-        if "SPICE" not in method
-    ]
+    if "SPICE" in cocoEval.params.get("metrics", []):
+        cocoEval.params["metrics"] = [
+            m for m in cocoEval.params["metrics"] if m != "SPICE"
+        ]
 
     cocoEval.params["image_id"] = coco.getImgIds()
     cocoEval.evaluate()
