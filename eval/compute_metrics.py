@@ -13,10 +13,11 @@ def main():
 
     cocoEval = COCOEvalCap(coco, cocoRes)
 
-    if "SPICE" in cocoEval.params.get("metrics", []):
-        cocoEval.params["metrics"] = [
-            m for m in cocoEval.params["metrics"] if m != "SPICE"
-        ]
+    try:
+        cocoEval.evaluate()
+    except Exception as e:
+        print("SPICE skipped:", e)
+
 
     cocoEval.params["image_id"] = coco.getImgIds()
     cocoEval.evaluate()
