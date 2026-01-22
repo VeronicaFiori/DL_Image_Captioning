@@ -1,4 +1,89 @@
 import argparse
+import json
+from pycocotools.coco import COCO
+
+# scorers "safe"
+from pycocoevalcap.bleu.bleu import Bleu
+from pycocoevalcap.rouge.rouge import Rouge
+from pycocoevalcap.cider.cider import Cider
+
+
+def coco_to_gts(coco: COCO):
+    """
+    Ritorna dict: {image_id: [ {"caption": "..."} , ... ]}
+    dove image_id è l'id intero usato nel COCO json refs.
+    """
+    gts = {}
+    img_ids = coco.getImgIds()
+    for img_id in img_ids:
+        ann_ids = coco.getAnnIds(imgIds=[img_id])
+        anns = coco.loadAnns(ann_ids)
+        gts[img_id] = [{"caption": a["caption"]} for a in anns]
+    return gts
+
+
+def preds_to_res(preds_path: str):
+    """
+    preds json: list of {image_id:int, caption:str, ...}
+    Ritorna dict: {image_id: [ {"caption": "..."} ]}
+    """
+    with open(preds_path, "r", encoding="utf-8") as f:
+        preds = json.load(f)
+
+    res = {}
+    for p in preds:
+        img_id = int(p["image_id"])
+        res[img_id] = [{"caption": p["caption"]}]
+    return res
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--refs", required=True, help="refs json in COCO format")
+    ap.add_argument("--preds", required=True, help="preds json list of {image_id, caption}")
+    ap.add_argument("--out", default="", help="optional: save metrics to json")
+    args = ap.parse_args()
+
+    coco = COCO(args.refs)
+    gts = coco_to_gts(coco)
+    res = preds_to_res(args.preds)
+
+    # allinea: tieni solo image_id presenti in entrambi
+    common_ids = sorted(set(gts.keys()) & set(res.keys()))
+    gts = {k: gts[k] for k in common_ids}
+    res = {k: res[k] for k in common_ids}
+
+    scorers = [
+        (Bleu(4), ["BLEU_1", "BLEU_2", "BLEU_3", "BLEU_4"]),
+        (Rouge(), "ROUGE_L"),
+        (Cider(), "CIDEr"),
+    ]
+
+    results = {}
+    for scorer, method in scorers:
+        score, scores = scorer.compute_score(gts, res)
+        if isinstance(method, (list, tuple)):
+            # Bleu ritorna 4 valori
+            for m, s in zip(method, score):
+                results[m] = float(s)
+        else:
+            results[method] = float(score)
+
+    print("\n=== METRICS (NO METEOR / NO SPICE) ===")
+    for k in sorted(results.keys()):
+        print(f"{k}: {results[k]:.4f}")
+
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2)
+        print("\nSaved metrics to:", args.out)
+
+
+if __name__ == "__main__":
+    main()
+
+"""
+import argparse
 from pycocotools.coco import COCO
 from pycocoevalcap.eval import COCOEvalCap
 
@@ -50,7 +135,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+"""
 
 """
 import argparse
