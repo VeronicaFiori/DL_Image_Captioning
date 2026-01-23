@@ -180,17 +180,20 @@ class Blip2Captioner:
             # 2) rewrite SOLO stile (sampling)
             self.cfg.max_new_tokens = int(max_new_tokens)
             self.cfg.num_beams = 1
-            self.cfg.temperature = 0.9
+            self.cfg.temperature = 1
             self.cfg.top_p = 0.9
 
             rewrite_prompt = (
-                "Rewrite the caption below WITHOUT changing its meaning.\n"
-                "Do not add new objects/actions.\n"
-                "One sentence, max 20 words.\n"
-                "You MUST follow the style requirement.\n\n"
+                "You are rewriting a caption.\n"
+                "ABSOLUTE RULES:\n"
+                "- Do NOT change the meaning.\n"
+                "- Do NOT add new objects/actions.\n"
+                "- One sentence, max 20 words.\n"
+                "- If you cannot follow the style requirement, output exactly: cannot comply\n\n"
                 f"STYLE REQUIREMENT:\n{style_text}\n\n"
-                f"BASE CAPTION:\n{base}\n\n"
-                "Caption:"
+                "CAPTION TO REWRITE:\n"
+                f"{base}\n\n"
+                "Rewrite now:"
             )
             out = self.caption(image=image, user_prompt=rewrite_prompt)
             return out
