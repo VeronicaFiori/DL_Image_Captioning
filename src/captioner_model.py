@@ -118,44 +118,39 @@ class Blip2Captioner:
 
 
 
+    
     @torch.inference_mode()
     def caption_facts_first(self, image: Image.Image, style_text: str, max_new_tokens: int = 60) -> str:
-        """
-        Two-step:
-        1) Estrae facts visibili in modo deterministico
-        2) Riscrive UNA caption con lo stile richiesto, vincolata ai facts
-        """
-        # salva config attuale
         old = (self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p)
-
         try:
-            # 1) facts (deterministico)
+            # 1) FACTS (deterministico)
             self.cfg.max_new_tokens = 80
             self.cfg.num_beams = 5
             self.cfg.temperature = 0.0
             self.cfg.top_p = 1.0
 
             facts_prompt = (
-                "List only the visible objects and actions in the image.\n"
+                "Extract ONLY visible facts.\n"
                 "Rules:\n"
                 "- No guessing.\n"
                 "- No extra objects.\n"
                 "- If unsure write 'unknown'.\n"
-                "Return 3-8 bullet points.\n"
+                "Return 3-8 bullet points about objects, actions, and setting.\n"
             )
             facts = self.caption(image=image, user_prompt=facts_prompt)
 
-            # 2) rewrite vincolato ai facts (deterministico)
+            # 2) REWRITE (più stile) — beams=1 + sampling
             self.cfg.max_new_tokens = int(max_new_tokens)
-            self.cfg.num_beams = 5
-            self.cfg.temperature = 0.0
-            self.cfg.top_p = 1.0
+            self.cfg.num_beams = 1
+            self.cfg.temperature = 0.8
+            self.cfg.top_p = 0.9
 
             rewrite_prompt = (
-                "Using ONLY the facts below, write ONE caption.\n"
-                "Do not add any object not in the facts.\n"
+                "Write ONE caption using ONLY the facts below.\n"
+                "Do NOT add any object/action not present in facts.\n"
                 "One sentence, max 20 words.\n"
-                f"Style requirement: {style_text}\n\n"
+                "You MUST follow the style requirement.\n\n"
+                f"STYLE REQUIREMENT:\n{style_text}\n\n"
                 f"FACTS:\n{facts}\n\n"
                 "Caption:"
             )
@@ -165,49 +160,40 @@ class Blip2Captioner:
         finally:
             self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p = old
 
-
     @torch.inference_mode()
     def caption_style_from_base(self, image: Image.Image, style_text: str, max_new_tokens: int = 40) -> str:
-            # salva config
-            old = (self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p)
-            try:
-                # 1) base factual caption (deterministica)
-                self.cfg.max_new_tokens = 40
-                self.cfg.num_beams = 1
-                self.cfg.temperature = 0.7
-                self.cfg.top_p = 0.9
+        old = (self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p)
+        try:
+            # 1) base caption (deterministica)
+            self.cfg.max_new_tokens = 40
+            self.cfg.num_beams = 5
+            self.cfg.temperature = 0.0
+            self.cfg.top_p = 1.0
 
-                base_prompt = (
-                    "Write ONE factual caption describing the image. "
-                    "Use only what is visible. Do not invent objects. "
-                    "One sentence, max 20 words."
-                )
-                base = self.caption(image=image, user_prompt=base_prompt)
-                print("\n[BASE]", base, "[/BASE]\n")
-                # 2) rewrite SOLO stile, senza cambiare contenuto
-                self.cfg.max_new_tokens = int(max_new_tokens)
-                self.cfg.num_beams = 1
-                self.cfg.temperature = 0.8
-                self.cfg.top_p = 0.9
+            base_prompt = (
+                "Write ONE factual caption describing the image. "
+                "Use only what is visible. Do not invent objects. "
+                "One sentence, max 20 words."
+            )
+            base = self.caption(image=image, user_prompt=base_prompt)
 
-                rewrite_prompt = (
-                    "Rewrite the caption below WITHOUT changing the meaning.\n"
-                    
-                    "You MUST follow the style requirement.\n"
-                    "You MUST use ONLY the facts.\n"
-                    "If the style asks for hashtags/technical terms, include them.\n"
-                    "If you cannot comply, say: 'cannot comply'.\n\n"
-                    "TASK: Write ONE caption.\n"
-                    "CONSTRAINTS:\n"
-                    "- One sentence, max 20 words.\n"
-                    "- Use ONLY facts. Do NOT add objects/actions not in facts.\n\n"
-                    f"STYLE REQUIREMENT:\n{style_text}\n\n"
-                    f"FACTS:\n{facts}\n\n"
-                    "CAPTION:"
-                )
-                out = self.caption(image=image, user_prompt=rewrite_prompt)
-                print("\n[REWRITE]", out, "[/REWRITE]\n")
-                return out
-            finally:
-                self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p = old
+            # 2) rewrite SOLO stile (sampling)
+            self.cfg.max_new_tokens = int(max_new_tokens)
+            self.cfg.num_beams = 1
+            self.cfg.temperature = 0.9
+            self.cfg.top_p = 0.9
 
+            rewrite_prompt = (
+                "Rewrite the caption below WITHOUT changing its meaning.\n"
+                "Do not add new objects/actions.\n"
+                "One sentence, max 20 words.\n"
+                "You MUST follow the style requirement.\n\n"
+                f"STYLE REQUIREMENT:\n{style_text}\n\n"
+                f"BASE CAPTION:\n{base}\n\n"
+                "Caption:"
+            )
+            out = self.caption(image=image, user_prompt=rewrite_prompt)
+            return out
+
+        finally:
+            self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p = old

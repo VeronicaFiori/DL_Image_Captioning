@@ -9,16 +9,16 @@ from src.captioner_model import Blip2Captioner, CaptionConfig
 
 def build_prompt(style_text: str, extra: str = "") -> str:
     prompt = f"""
-Write ONE caption describing the image.
+        Write ONE caption describing the image.
 
-Constraints:
-- Use only information visible in the image.
-- Do not invent objects, actions, text, logos, or counts.
-- Use exactly ONE sentence (max 20 words).
+        Constraints:
+        - Use only information visible in the image.
+        - Do not invent objects, actions, text, logos, or counts.
+        - Use exactly ONE sentence (max 20 words).
 
-Style requirement:
-{style_text}
-""".strip()
+        Style requirement:
+        {style_text}
+        """.strip()
 
     if extra.strip():
         prompt += "\n\nExtra requirement:\n" + extra.strip()
@@ -64,9 +64,18 @@ def main():
     # 4) generate
     if args.facts_first:
         cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
+        prompt_used = f"[FACTS_FIRST MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
     else:
-        user_prompt = f"Write ONE factual caption. {style_text}"
+        user_prompt = (
+            "Write ONE caption describing the image.\n"
+            "Constraints:\n"
+            "- Use only information visible in the image.\n"
+            "- Do not invent objects, actions, text, logos, or counts.\n"
+            "- Use exactly ONE sentence (max 20 words).\n\n"
+            f"Style requirement:\n{style_text}"
+        )
         cap = captioner.caption(image=image, user_prompt=user_prompt)
+        prompt_used = user_prompt
 
     
 
