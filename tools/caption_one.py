@@ -71,6 +71,8 @@ def main():
     #elif args.style_from_base:
     #    cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
     #    prompt_used =  f"[STYLE_FROM_BASE MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
+    
+    
     base_prompt = (
         "Write ONE factual caption describing the image. "
         "Use only what is visible. Do not invent objects. "
@@ -79,8 +81,9 @@ def main():
     base = captioner.caption(image=image, user_prompt=base_prompt)
 
     if args.style != "factual":
-        rewriter = StyleRewriter(RewriteConfig(model_id="Qwen/Qwen2.5-1.5B-Instruct"))
+        rewriter = StyleRewriter(RewriteConfig())
         cap = rewriter.rewrite(base_caption=base, style_text=style_text, extra=args.extra)
+    
     else:
         user_prompt = (
             "Write ONE caption describing the image.\n"
