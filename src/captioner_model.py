@@ -71,21 +71,29 @@ class Blip2Captioner:
 
         output_ids = self.model.generate(**inputs, **gen_kwargs)
 
-        # ✅ decodifica output
-        text = self.processor.tokenizer.decode(
-            output_ids[0], skip_special_tokens=True
+        decoded = self.processor.tokenizer.decode(
+            output_ids[0],
+            skip_special_tokens=True
         ).strip()
 
-        # ripulisci "Answer:"
-        low = text.lower()
-        if low.startswith("answer:"):
-            text = text[len("answer:"):].strip()
-        elif "answer:" in low:
-            # se lo include in mezzo, taglia l'ultima occorrenza
-            idx = low.rfind("answer:")
-            text = text[idx + len("answer:"):].strip()
+        # --- pulizia robusta ---
+        text = decoded
 
+        # 1) Se il modello ha ripetuto il prompt, rimuovi ESATTAMENTE il prompt (non rfind)
+        if text.startswith(prompt):
+            text = text[len(prompt):].strip()
+
+        # 2) Se rimane "Answer:" all'inizio, rimuovilo
+        if text.lower().startswith("answer:"):
+            text = text[len("answer:"):].strip()
+
+        # 3) Se dopo la pulizia è vuoto, NON buttare tutto: tieni decoded (fallback)
+        if not text:
+            text = decoded
+            if text.lower().startswith("answer:"):
+                text = text[len("answer:"):].strip()    
         return text
+
 
     @torch.inference_mode()
     def caption_facts_first(self, image: Image.Image, style_text: str, max_new_tokens: int = 60) -> str:
