@@ -39,6 +39,8 @@ def main():
     ap.add_argument("--dtype", default=None, help="float16 or float32 (default: auto)")
     ap.add_argument("--extra", default="", help="Extra instructions (optional)")
     ap.add_argument("--facts_first", action="store_true", help="Two-step safer captioning (anti-hallucination)")
+    ap.add_argument("--style_from_base", action="store_true", help="Style transfer from base caption")
+
     args = ap.parse_args()
 
     # 1) styles
@@ -65,6 +67,8 @@ def main():
     if args.facts_first:
         cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
         prompt_used = f"[FACTS_FIRST MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
+    elif args.style_from_base:
+        cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
     else:
         user_prompt = (
             "Write ONE caption describing the image.\n"
