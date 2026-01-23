@@ -13,6 +13,7 @@ class CaptionConfig:
     max_new_tokens: int = 40
     num_beams: int = 3
     temperature: float = 1.0
+    top_p: float = 0.9
     device: Optional[str] = None
     dtype: Optional[torch.dtype] = None
 
