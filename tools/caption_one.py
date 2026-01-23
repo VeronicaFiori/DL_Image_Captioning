@@ -40,11 +40,11 @@ def main():
     ap.add_argument("--facts_first", action="store_true", help="Two-step safer captioning (anti-hallucination)")
     args = ap.parse_args()
 
-    # 1) load styles + build style text
+    # 1) styles
     styles = load_styles()
     style_text = build_style_prompt(args.style, styles)
 
-    # 2) build captioner
+    # 2) captioner (qui setti TUTTI i parametri)
     captioner = Blip2Captioner(
         CaptionConfig(
             model_id=args.model_id,
@@ -57,28 +57,21 @@ def main():
         )
     )
 
-    # 3) load image
+    # 3) image
     image = Image.open(args.image).convert("RGB")
 
     # 4) generate
     if args.facts_first:
-        # usa il metodo nuovo che aggiungi in src/captioner_model.py
+        # usa caption_facts_first SE lo hai aggiunto dentro la classe
         cap = captioner.caption_facts_first(
             image=image,
             style_text=style_text,
             max_new_tokens=args.max_new_tokens,
         )
-        prompt_used = f"[FACTS_FIRST MODE]\nStyle: {args.style}\nStyle text: {style_text}"
+        prompt_used = f"[FACTS_FIRST MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
     else:
         user_prompt = build_prompt(style_text, args.extra)
-        cap = captioner.caption(
-            image=image,
-            user_prompt=user_prompt,
-            max_new_tokens=args.max_new_tokens,
-            num_beams=args.num_beams,
-            temperature=args.temperature,
-            top_p=args.top_p,
-        )
+        cap = captioner.caption(image=image, user_prompt=user_prompt)
         prompt_used = user_prompt
 
     print("\n========== PROMPT ==========")
@@ -92,6 +85,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 """
