@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Optional
+
 import torch
 from PIL import Image
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
@@ -9,96 +8,98 @@ from transformers import Blip2Processor, Blip2ForConditionalGeneration
 
 @dataclass
 class CaptionConfig:
-    model_id: str = "Salesforce/blip2-flan-t5-xl"  # <-- ESISTE
+    model_id: str = "Salesforce/blip2-flan-t5-xl"
     max_new_tokens: int = 40
     num_beams: int = 3
     temperature: float = 1.0
     top_p: float = 0.9
-    device: Optional[str] = None
-    dtype: Optional[torch.dtype] = None
+    device: Optional[str] = None   # "cuda" o "cpu"
+    dtype: Optional[str] = None    # "float16" / "float32"
 
 
 class Blip2Captioner:
     def __init__(self, cfg: CaptionConfig):
         self.cfg = cfg
 
+        # --- device ---
         if cfg.device is None:
-            cfg.device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        else:
+            self.device = cfg.device
 
-        # fp16 su GPU per velocità/memoria
+        # --- dtype ---
         if cfg.dtype is None:
-            cfg.dtype = torch.float16 if cfg.device == "cuda" else torch.float32
+            self.torch_dtype = torch.float16 if self.device == "cuda" else torch.float32
+        else:
+            # esempio: cfg.dtype="float16" -> torch.float16
+            self.torch_dtype = getattr(torch, cfg.dtype)
 
+        # --- load processor + model ---
         self.processor = Blip2Processor.from_pretrained(cfg.model_id)
 
-        # su GPU usiamo device_map="auto"
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             cfg.model_id,
-            torch_dtype=cfg.dtype,
-            device_map="auto" if cfg.device == "cuda" else None,
-        )
-
-        if cfg.device != "cuda":
-            self.model.to(cfg.device)
+            torch_dtype=self.torch_dtype,
+            low_cpu_mem_usage=True,
+        ).to(self.device)
 
         self.model.eval()
 
     @torch.inference_mode()
     def caption(self, image: Image.Image, user_prompt: str) -> str:
-        # BLIP2-FlanT5 lavora bene con schema Q/A
+        """
+        Genera una caption usando i parametri in self.cfg.
+        """
         prompt = f"Question: {user_prompt}\nAnswer:"
 
-        inputs = self.processor(
-            images=image,
-            text=prompt,
-            return_tensors="pt",
-        ).to(self.device)
+        inputs = self.processor(images=image, text=prompt, return_tensors="pt")
+        # sposta tensori su device
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         gen_kwargs = {
-            "max_new_tokens": self.cfg.max_new_tokens,
-            "num_beams": self.cfg.num_beams,
+            "max_new_tokens": int(self.cfg.max_new_tokens),
+            "num_beams": int(self.cfg.num_beams),
         }
 
-        # sampling solo se beams=1 e temperature>0
-        if self.cfg.num_beams == 1 and self.cfg.temperature is not None and self.cfg.temperature > 0:
+        # sampling SOLO se num_beams==1
+        if int(self.cfg.num_beams) == 1 and float(self.cfg.temperature) > 0:
             gen_kwargs.update(
                 do_sample=True,
-                temperature=self.cfg.temperature,
-                top_p=self.cfg.top_p,
+                temperature=float(self.cfg.temperature),
+                top_p=float(self.cfg.top_p),
             )
 
         output_ids = self.model.generate(**inputs, **gen_kwargs)
 
-        #  DECODIFICA DELL'OUTPUT, NON DELL'INPUT
+        # ✅ decodifica output
         text = self.processor.tokenizer.decode(
-            output_ids[0],
-            skip_special_tokens=True
+            output_ids[0], skip_special_tokens=True
         ).strip()
 
-        # ripulisci se il modello include "Answer:"
-        if text.lower().startswith("answer:"):
-            text = text[len("answer:"):].strip()
-
-        #  se per qualche motivo ripete il prompt, taglia tutto ciò che precede "Answer:"
+        # ripulisci "Answer:"
         low = text.lower()
-        if "answer:" in low:
-            text = text[low.rfind("answer:") + len("answer:"):].strip()
+        if low.startswith("answer:"):
+            text = text[len("answer:"):].strip()
+        elif "answer:" in low:
+            # se lo include in mezzo, taglia l'ultima occorrenza
+            idx = low.rfind("answer:")
+            text = text[idx + len("answer:"):].strip()
 
         return text
 
-
-
     @torch.inference_mode()
     def caption_facts_first(self, image: Image.Image, style_text: str, max_new_tokens: int = 60) -> str:
+        """
+        Two-step:
+        1) Estrae facts visibili in modo deterministico
+        2) Riscrive UNA caption con lo stile richiesto, vincolata ai facts
+        """
         # salva config attuale
-        old_max = self.cfg.max_new_tokens
-        old_beams = self.cfg.num_beams
-        old_temp = self.cfg.temperature
-        old_top_p = self.cfg.top_p
+        old = (self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p)
 
         try:
-            # 1) facts: deterministico
-            self.cfg.max_new_tokens = 60
+            # 1) facts (deterministico)
+            self.cfg.max_new_tokens = 80
             self.cfg.num_beams = 5
             self.cfg.temperature = 0.0
             self.cfg.top_p = 1.0
@@ -113,8 +114,12 @@ class Blip2Captioner:
             )
             facts = self.caption(image=image, user_prompt=facts_prompt)
 
-            # 2) rewrite: deterministico + vincolato ai facts
-            self.cfg.max_new_tokens = max_new_tokens
+            # 2) rewrite vincolato ai facts (deterministico)
+            self.cfg.max_new_tokens = int(max_new_tokens)
+            self.cfg.num_beams = 5
+            self.cfg.temperature = 0.0
+            self.cfg.top_p = 1.0
+
             rewrite_prompt = (
                 "Using ONLY the facts below, write ONE caption.\n"
                 "Do not add any object not in the facts.\n"
@@ -127,8 +132,4 @@ class Blip2Captioner:
             return cap
 
         finally:
-            # ripristina config originale
-            self.cfg.max_new_tokens = old_max
-            self.cfg.num_beams = old_beams
-            self.cfg.temperature = old_temp
-            self.cfg.top_p = old_top_p
+            self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p = old
