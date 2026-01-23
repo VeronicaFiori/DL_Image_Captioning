@@ -173,9 +173,9 @@ class Blip2Captioner:
             try:
                 # 1) base factual caption (deterministica)
                 self.cfg.max_new_tokens = 40
-                self.cfg.num_beams = 5
-                self.cfg.temperature = 0.0
-                self.cfg.top_p = 1.0
+                self.cfg.num_beams = 1
+                self.cfg.temperature = 0.7
+                self.cfg.top_p = 0.9
 
                 base_prompt = (
                     "Write ONE factual caption describing the image. "
@@ -192,13 +192,18 @@ class Blip2Captioner:
 
                 rewrite_prompt = (
                     "Rewrite the caption below WITHOUT changing the meaning.\n"
-                    "Rules:\n"
-                    "- Do NOT add or remove objects, actions, attributes, or counts.\n"
-                    "- Keep ONE sentence (max 20 words).\n"
-                    "- Change ONLY writing style.\n"
-                    f"- Style requirement: {style_text}\n\n"
-                    f"CAPTION TO REWRITE:\n{base}\n\n"
-                    "Rewritten caption:"
+                    
+                    "You MUST follow the style requirement.\n"
+                    "You MUST use ONLY the facts.\n"
+                    "If the style asks for hashtags/technical terms, include them.\n"
+                    "If you cannot comply, say: 'cannot comply'.\n\n"
+                    "TASK: Write ONE caption.\n"
+                    "CONSTRAINTS:\n"
+                    "- One sentence, max 20 words.\n"
+                    "- Use ONLY facts. Do NOT add objects/actions not in facts.\n\n"
+                    f"STYLE REQUIREMENT:\n{style_text}\n\n"
+                    f"FACTS:\n{facts}\n\n"
+                    "CAPTION:"
                 )
                 out = self.caption(image=image, user_prompt=rewrite_prompt)
                 print("\n[REWRITE]", out, "[/REWRITE]\n")
