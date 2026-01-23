@@ -49,50 +49,72 @@ class Blip2Captioner:
     def caption(self, image: Image.Image, user_prompt: str) -> str:
         """
         Genera una caption usando i parametri in self.cfg.
+        Se il modello fa echo del prompt, usa un fallback più semplice.
         """
-        prompt = f"Question: {user_prompt}\nAnswer:"
 
-        inputs = self.processor(images=image, text=prompt, return_tensors="pt")
-        # sposta tensori su device
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        def _normalize(s: str) -> str:
+            s = s.lower().strip()
+            s = re.sub(r"\s+", " ", s)
+            return s
 
-        gen_kwargs = {
-            "max_new_tokens": int(self.cfg.max_new_tokens),
-            "num_beams": int(self.cfg.num_beams),
-        }
+        def _generate(text_prompt: str) -> str:
+            inputs = self.processor(images=image, text=text_prompt, return_tensors="pt")
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-        # sampling SOLO se num_beams==1
-        if int(self.cfg.num_beams) == 1 and float(self.cfg.temperature) > 0:
-            gen_kwargs.update(
-                do_sample=True,
-                temperature=float(self.cfg.temperature),
-                top_p=float(self.cfg.top_p),
+            gen_kwargs = {
+                "max_new_tokens": int(self.cfg.max_new_tokens),
+                "num_beams": int(self.cfg.num_beams),
+            }
+
+            # sampling SOLO se num_beams==1
+            if int(self.cfg.num_beams) == 1 and float(self.cfg.temperature) > 0:
+                gen_kwargs.update(
+                    do_sample=True,
+                    temperature=float(self.cfg.temperature),
+                    top_p=float(self.cfg.top_p),
+                )
+
+            output_ids = self.model.generate(**inputs, **gen_kwargs)
+            out = self.processor.tokenizer.decode(output_ids[0], skip_special_tokens=True).strip()
+            return out
+
+        # 1) Prompt “Q/A” ma COMPATTO (una riga)
+        compact = " ".join(line.strip() for line in user_prompt.splitlines() if line.strip())
+        qa_prompt = f"Question: {compact}\nAnswer:"
+
+        out1 = _generate(qa_prompt)
+
+        # Se sta facendo echo, tipicamente out1 ≈ qa_prompt (o contiene tutto il prompt)
+        n_out1 = _normalize(out1)
+        n_in1 = _normalize(qa_prompt)
+
+        def looks_like_echo(n_out: str, n_in: str) -> bool:
+            # output uguale o quasi uguale, o contiene "question:" e "answer:" e pochissimo altro
+            if n_out == n_in:
+                return True
+            if n_out.startswith(n_in):
+                return True
+            if "question:" in n_out and "answer:" in n_out and len(n_out) <= len(n_in) + 10:
+                return True
+            return False
+
+        if looks_like_echo(n_out1, n_in1):
+            # 2) Fallback captioning-style (niente Q/A, più robusto per BLIP2)
+            plain_prompt = (
+                "Describe the image in ONE short sentence (max 20 words). "
+                "Use only what is visible. Do not invent objects."
             )
+            # se vuoi mantenere lo stile, aggiungilo ma sempre in singola riga
+            # (user_prompt qui può contenere stile già dentro)
+            out2 = _generate(plain_prompt + " " + compact)
+            out2 = out2.strip()
 
-        output_ids = self.model.generate(**inputs, **gen_kwargs)
+            # se anche out2 è vuoto/strano, ritorna out1 comunque
+            if out2 and not looks_like_echo(_normalize(out2), _normalize(plain_prompt + " " + compact)):
+                return out2
 
-        decoded = self.processor.tokenizer.decode(
-            output_ids[0],
-            skip_special_tokens=True
-        ).strip()
+        return out1
 
-        # --- pulizia robusta ---
-        text = decoded
-
-        # 1) Se il modello ha ripetuto il prompt, rimuovi ESATTAMENTE il prompt (non rfind)
-        if text.startswith(prompt):
-            text = text[len(prompt):].strip()
-
-        # 2) Se rimane "Answer:" all'inizio, rimuovilo
-        if text.lower().startswith("answer:"):
-            text = text[len("answer:"):].strip()
-
-        # 3) Se dopo la pulizia è vuoto, NON buttare tutto: tieni decoded (fallback)
-        if not text:
-            text = decoded
-            if text.lower().startswith("answer:"):
-                text = text[len("answer:"):].strip()    
-        return text
 
 
     @torch.inference_mode()
