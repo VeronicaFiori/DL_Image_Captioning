@@ -64,11 +64,13 @@ def main():
     # 4) generate
     if args.facts_first:
         # usa caption_facts_first SE lo hai aggiunto dentro la classe
-        cap = captioner.caption_facts_first(
-            image=image,
-            style_text=style_text,
-            max_new_tokens=args.max_new_tokens,
-        )
+        #cap = captioner.caption_facts_first(
+        #    image=image,
+        #    style_text=style_text,
+        #    max_new_tokens=args.max_new_tokens,
+        #)
+        cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
+
         prompt_used = f"[FACTS_FIRST MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
     else:
         user_prompt = build_prompt(style_text, args.extra)
