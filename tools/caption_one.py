@@ -1,7 +1,8 @@
 
 import argparse
 from PIL import Image
-
+import re
+import torch
 from src.prompts import load_styles, build_style_prompt
 from src.captioner_model import Blip2Captioner, CaptionConfig
 
