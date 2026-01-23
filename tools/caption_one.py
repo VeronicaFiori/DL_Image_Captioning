@@ -5,6 +5,7 @@ import re
 import torch
 from src.prompts import load_styles, build_style_prompt
 from src.captioner_model import Blip2Captioner, CaptionConfig
+from src.style_rewriter import StyleRewriter, RewriteConfig
 
 
 def build_prompt(style_text: str, extra: str = "") -> str:
@@ -64,13 +65,22 @@ def main():
     image = Image.open(args.image).convert("RGB")
 
     # 4) generate
-    if args.facts_first:
-        cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
-        prompt_used = f"[FACTS_FIRST MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
-    elif args.style_from_base:
-        cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
-        prompt_used =  f"[STYLE_FROM_BASE MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
+    #if args.facts_first:
+    #    cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
+    #    prompt_used = f"[FACTS_FIRST MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
+    #elif args.style_from_base:
+    #    cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
+    #    prompt_used =  f"[STYLE_FROM_BASE MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
+    base_prompt = (
+        "Write ONE factual caption describing the image. "
+        "Use only what is visible. Do not invent objects. "
+        "One sentence, max 20 words."
+    )
+    base = captioner.caption(image=image, user_prompt=base_prompt)
 
+    if args.style != "factual":
+        rewriter = StyleRewriter(RewriteConfig(model_id="Qwen/Qwen2.5-1.5B-Instruct"))
+        cap = rewriter.rewrite(base_caption=base, style_text=style_text, extra=args.extra)
     else:
         user_prompt = (
             "Write ONE caption describing the image.\n"
