@@ -183,21 +183,25 @@ class Blip2Captioner:
                     "One sentence, max 20 words."
                 )
                 base = self.caption(image=image, user_prompt=base_prompt)
+                print("\n[BASE]", base, "[/BASE]\n")
                 # 2) rewrite SOLO stile, senza cambiare contenuto
                 self.cfg.max_new_tokens = int(max_new_tokens)
-                self.cfg.num_beams = 5
-                self.cfg.temperature = 0.0
-                self.cfg.top_p = 1.0
+                self.cfg.num_beams = 1
+                self.cfg.temperature = 0.8
+                self.cfg.top_p = 0.9
 
                 rewrite_prompt = (
-                    "Rewrite the caption below in ONE sentence (max 20 words).\n"
-                    "DO NOT change the objects, actions, or counts.\n"
-                    "DO NOT add anything new.\n"
-                    f"Style requirement: {style_text}\n\n"
+                    "Rewrite the caption below WITHOUT changing the meaning.\n"
+                    "Rules:\n"
+                    "- Do NOT add or remove objects, actions, attributes, or counts.\n"
+                    "- Keep ONE sentence (max 20 words).\n"
+                    "- Change ONLY writing style.\n"
+                    f"- Style requirement: {style_text}\n\n"
                     f"CAPTION TO REWRITE:\n{base}\n\n"
                     "Rewritten caption:"
                 )
                 out = self.caption(image=image, user_prompt=rewrite_prompt)
+                print("\n[REWRITE]", out, "[/REWRITE]\n")
                 return out
             finally:
                 self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p = old
