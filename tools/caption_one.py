@@ -69,6 +69,8 @@ def main():
         prompt_used = f"[FACTS_FIRST MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
     elif args.style_from_base:
         cap = captioner.caption_style_from_base(image=image, style_text=style_text, max_new_tokens=args.max_new_tokens)
+        prompt_used =  f"[STYLE_FROM_BASE MODE]\nStyle key: {args.style}\nStyle text: {style_text}"
+
     else:
         user_prompt = (
             "Write ONE caption describing the image.\n"
