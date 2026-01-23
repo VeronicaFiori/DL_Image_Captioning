@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
-
+import re
+import torch
 import torch
 from PIL import Image
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
