@@ -83,7 +83,7 @@ def main():
     if args.style != "factual":
         rewriter = StyleRewriter(RewriteConfig())
         cap = rewriter.rewrite(base_caption=base, style_text=style_text, extra=args.extra)
-    
+        prompt_used=base_prompt
     else:
         user_prompt = (
             "Write ONE caption describing the image.\n"
