@@ -45,7 +45,6 @@ class QwenFidelityEvaluator:
         )
 
         # Alcuni tensor vanno su device, ma con device_map auto spesso va bene così.
-        # Se ti dà mismatch device, dimmelo e lo sistemiamo.
         gen = self.model.generate(**inputs, max_new_tokens=300)
         out = self.processor.batch_decode(gen, skip_special_tokens=True)[0]
         return out

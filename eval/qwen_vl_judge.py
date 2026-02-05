@@ -18,7 +18,6 @@ JUDGE_SYSTEM = (
 
 def try_parse_json(text: str) -> Dict[str, Any]:
     text = text.strip()
-    # best effort: find first '{' ... last '}'
     if "{" in text and "}" in text:
         text = text[text.find("{"): text.rfind("}") + 1]
     return json.loads(text)
@@ -60,7 +59,7 @@ def judge_one(model, processor, image: Image.Image, caption: str, device: str) -
     try:
         j = try_parse_json(out_text)
     except Exception:
-        # fallback “soft”
+        # fallback soft
         j = {
             "faithful": False,
             "score": 1,
@@ -105,10 +104,7 @@ def main():
         img_id = item["image_id"]
         cap = item["caption"]
 
-        # attenzione: qui assumo che il file_name sia ricostruibile tramite refs,
-        # quindi per comodità ti chiedo di passare anche refs oppure usare img_id->file mapping.
-        # Se nel tuo preds non hai il file_name, lo recuperiamo dal refs.
-        # Per ora: prova con un campo file_name se lo aggiungi nei preds.
+    
         file_name = item.get("file_name", None)
         if file_name is None:
             raise ValueError("Nel preds json manca 'file_name'. Modifica flickr8k_to_coco.py per salvarlo.")

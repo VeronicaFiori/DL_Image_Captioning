@@ -31,10 +31,10 @@ class StyleRewriter:
             else:
                 self.torch_dtype = torch.float32
 
-        # ✅ SOLO TOKENIZER (testo)
+        # Solo tokenizer (testo)
         self.tokenizer = AutoTokenizer.from_pretrained(cfg.model_id, use_fast=True)
 
-        # ✅ SOLO MODELLO TESTO
+        # Solo modello 
         self.model = AutoModelForCausalLM.from_pretrained(
             cfg.model_id,
             torch_dtype=self.torch_dtype,
@@ -44,6 +44,7 @@ class StyleRewriter:
 
     @torch.inference_mode()
     def rewrite(self, base_caption: str, style_text: str, extra: str = "") -> str:
+         #system prompt 
         system = (
             "You are a careful rewriting assistant.\n"
             "Rewrite the caption WITHOUT changing its meaning.\n"
@@ -51,7 +52,7 @@ class StyleRewriter:
             "Output ONE sentence (max 20 words).\n"
             "Output ONLY the rewritten caption.\n"
         )
-
+        #user prompt
         user = (
             f"STYLE REQUIREMENT:\n{style_text}\n\n"
             f"BASE CAPTION:\n{base_caption}\n\n"

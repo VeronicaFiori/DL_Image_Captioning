@@ -1,13 +1,9 @@
 styles:
   factual: "Describe the image factually and concisely. Avoid speculation."
   technical: "Use technical language. MUST mention foreground/background and spatial relation (left/right)."
-  instagram: "Friendly tone. MUST include exactly 2 hashtags at the end."
+  social: "Friendly tone. MUST include exactly 2 hashtags at the end."
   poetic: "Poetic tone, but do not add objects. Use one metaphor."
-  funny: "Mild humor, but do not add objects."
-  journalism: "Objective, journalistic tone. No adjectives."
+  #funny: "Mild humor, but do not add objects."
+  #journalism: "Objective, journalistic tone. No adjectives."
 
-  #technical: "Describe the image using technical language: name entities, attributes (color/size), interaction, and spatial relations (left/right/foreground/background). Avoid jokes and emotion."
-  #poetic: "Write a poetic caption inspired by the image, but do not invent objects not visible."
-  #funny: "Write a funny caption based on what is visible in the image, without inventing new objects."
-  #journalism: "Write a short journalistic caption describing the scene objectively."
-  #instagram: "Write an Instagram-style caption with a friendly tone and up to 3 hashtags (#...), without inventing objects."
+  

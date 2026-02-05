@@ -3,12 +3,14 @@ import json
 import argparse
 from PIL import Image
 from tqdm import tqdm
-
 from src.prompts import load_styles, build_style_prompt
 from src.datasets.flickr8k_dataset import Flickr8kDataset
 from src.captioner_model import Blip2Captioner, CaptionConfig
 
-
+"""Trasforma Flickr8k in una struttura JSON compatibile 
+   con lo standard MS-COCO Captions, perché la libreria di valutazione
+   ( pycocoevalcap) si aspetta quel formato"""
+#genera refs in formato COCO
 def build_coco_refs(dataset: Flickr8kDataset):
     images = []
     annotations = []
@@ -45,7 +47,7 @@ def main():
 
     os.makedirs(args.out_dir, exist_ok=True)
 
-    # stile -> istruzione
+    # stile 
     styles = load_styles()
     instruction = build_style_prompt(args.style, styles)
 
@@ -71,12 +73,12 @@ def main():
     preds = []
     n = len(dataset) if args.limit == 0 else min(args.limit, len(dataset))
 
-    # prompt “solido” per captioning (1 frase)
+    # prompt solido per captioning (1 frase)
     base_prompt = (
         "Write ONE concise caption describing the image. "
         "Do not invent objects not visible. "
         f"{instruction}"
-    )
+    ) 
 
     for i in tqdm(range(n), desc=f"Generating preds ({args.split})"):
         sample = dataset[i]

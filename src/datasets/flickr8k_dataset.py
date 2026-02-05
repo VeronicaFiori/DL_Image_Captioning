@@ -3,12 +3,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 class Flickr8kDataset(Dataset):
-    """
-    Ritorna:
-      - image (PIL o tensore se transform)
-      - captions (lista di 5 caption GT)
-      - image_id (nome file)
-    """
+   
     def __init__(self, root: str, split: str = "train", transform=None):
         self.root = root
         self.transform = transform
@@ -16,6 +11,7 @@ class Flickr8kDataset(Dataset):
         img_dir = os.path.join(root, "images")
         cap_dir = os.path.join(root, "captions")
 
+        #legge gli split file
         split_map = {
             "train": "Flickr_8k.trainImages.txt",
             "val": "Flickr_8k.devImages.txt",
@@ -24,6 +20,7 @@ class Flickr8kDataset(Dataset):
         if split not in split_map:
             raise ValueError("split must be train/val/test")
 
+        #legge le caption
         split_file = os.path.join(cap_dir, split_map[split])
         token_file = os.path.join(cap_dir, "Flickr8k.token.txt")
 
@@ -31,7 +28,7 @@ class Flickr8kDataset(Dataset):
         with open(split_file, "r", encoding="utf-8") as f:
             self.images = [line.strip() for line in f if line.strip()]
 
-        # caption GT: dict img -> [cap1..cap5]
+        # caption 
         self.captions = {}
         with open(token_file, "r", encoding="utf-8") as f:
             for line in f:
@@ -55,4 +52,10 @@ class Flickr8kDataset(Dataset):
             image = self.transform(image)
 
         captions = self.captions.get(img_name, [])
+        """
+        Ritorna:
+            - image 
+            - captions 
+            - image_id 
+        """
         return {"image": image, "captions": captions, "image_id": img_name}

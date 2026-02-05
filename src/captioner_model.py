@@ -22,20 +22,20 @@ class Blip2Captioner:
     def __init__(self, cfg: CaptionConfig):
         self.cfg = cfg
 
-        # --- device ---
+        # device
         if cfg.device is None:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
         else:
             self.device = cfg.device
 
-        # --- dtype ---
+        # dtype 
         if cfg.dtype is None:
             self.torch_dtype = torch.float16 if self.device == "cuda" else torch.float32
         else:
             # esempio: cfg.dtype="float16" -> torch.float16
             self.torch_dtype = getattr(torch, cfg.dtype)
 
-        # --- load processor + model ---
+        # load processor + model
         self.processor = Blip2Processor.from_pretrained(cfg.model_id)
 
         self.model = Blip2ForConditionalGeneration.from_pretrained(
@@ -50,7 +50,7 @@ class Blip2Captioner:
     def caption(self, image: Image.Image, user_prompt: str) -> str:
         """
         Genera una caption usando i parametri in self.cfg.
-        Se il modello fa echo del prompt, usa un fallback più semplice.
+        Se il modello fa echo del prompt, allora usa un fallback più semplice.
         """
 
         def _normalize(s: str) -> str:
@@ -67,7 +67,7 @@ class Blip2Captioner:
                 "num_beams": int(self.cfg.num_beams),
             }
 
-            # sampling SOLO se num_beams==1
+            # sampling solo se num_beams==1
             if int(self.cfg.num_beams) == 1 and float(self.cfg.temperature) > 0:
                 gen_kwargs.update(
                     do_sample=True,
@@ -79,7 +79,7 @@ class Blip2Captioner:
             out = self.processor.tokenizer.decode(output_ids[0], skip_special_tokens=True).strip()
             return out
 
-        # 1) Prompt “Q/A” ma COMPATTO (una riga)
+        # 1) Prompt “Q/A” ma compatto (una riga)
         compact = " ".join(line.strip() for line in user_prompt.splitlines() if line.strip())
         qa_prompt = f"Question: {compact}\nAnswer:"
 
@@ -90,7 +90,7 @@ class Blip2Captioner:
         n_in1 = _normalize(qa_prompt)
 
         def looks_like_echo(n_out: str, n_in: str) -> bool:
-            # output uguale o quasi uguale, o contiene "question:" e "answer:" e pochissimo altro
+            # output uguale o quasi uguale, o contiene "question:" e "answer:" e poco altro
             if n_out == n_in:
                 return True
             if n_out.startswith(n_in):
@@ -105,12 +105,11 @@ class Blip2Captioner:
                 "Describe the image in ONE short sentence (max 20 words). "
                 "Use only what is visible. Do not invent objects."
             )
-            # se vuoi mantenere lo stile, aggiungilo ma sempre in singola riga
-            # (user_prompt qui può contenere stile già dentro)
+            
             out2 = _generate(plain_prompt + " " + compact)
             out2 = out2.strip()
 
-            # se anche out2 è vuoto/strano, ritorna out1 comunque
+            # se anche out2 è vuoto, ritorna out1 comunque
             if out2 and not looks_like_echo(_normalize(out2), _normalize(plain_prompt + " " + compact)):
                 return out2
 
@@ -139,7 +138,7 @@ class Blip2Captioner:
             )
             facts = self.caption(image=image, user_prompt=facts_prompt)
 
-            # 2) REWRITE (più stile) — beams=1 + sampling
+            # 2) REWRITE (più stile),  beams=1 + sampling
             self.cfg.max_new_tokens = int(max_new_tokens)
             self.cfg.num_beams = 1
             self.cfg.temperature = 0.8
@@ -160,11 +159,12 @@ class Blip2Captioner:
         finally:
             self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p = old
 
+
     @torch.inference_mode()
     def caption_style_from_base(self, image: Image.Image, style_text: str, max_new_tokens: int = 40) -> str:
         old = (self.cfg.max_new_tokens, self.cfg.num_beams, self.cfg.temperature, self.cfg.top_p)
         try:
-            # 1) base caption (deterministica)
+            # 1) base caption 
             self.cfg.max_new_tokens = 40
             self.cfg.num_beams = 5
             self.cfg.temperature = 0.0
@@ -177,7 +177,7 @@ class Blip2Captioner:
             )
             base = self.caption(image=image, user_prompt=base_prompt)
 
-            # 2) rewrite SOLO stile (sampling)
+            # 2) rewrite solo stile (sampling)
             self.cfg.max_new_tokens = int(max_new_tokens)
             self.cfg.num_beams = 1
             self.cfg.temperature = 1
